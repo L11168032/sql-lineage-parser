@@ -1,5 +1,5 @@
 ## 简介
-数据平台建设过程中需要对数据血缘进行解析，通过对血缘数据的探索，可以快速获取数据，加快数据开发的效率。
+数据平台建设过程中需要获取数据血缘信息，通过对血缘数据的探索，就可以快速获取数据，加快数据开发的效率。
 
 
 对于以hive为中心的数仓系统，简化架构可能为
@@ -46,7 +46,8 @@ from
 )t
 ```
 需要经过两层循环，过程为
-![524DD638-EEB0-4735-9F56-CB1450D62E46.png](http://ww1.sinaimg.cn/large/71f45afdgy1gha8plj0jjj212e10mn0n.jpg)
+![DC10D4B3-A22E-40AD-AFB5-C12D95C2CEC1.png](http://ww1.sinaimg.cn/large/71f45afdgy1ghacfj01a8j212c10in0g.jpg)
+
 
 最终血缘信息为
 ```
@@ -60,7 +61,38 @@ uname	from:{"expression":"concat('test', user_name)","isEnd":true,"sourceTableNa
 uname	from:{"expression":"concat('test', user_name)","isEnd":true,"sourceTableName":"user","targetColumnName":"'test'"}
 
 ```
+展开的树型结构为
+```
+{"isEnd":false}
 
+{"expression":"user_id","isEnd":false,"targetColumnName":"uid"}
 
+     {"isEnd":false,"targetColumnName":"user_id"}
+
+          {"expression":"user_id","isEnd":false,"targetColumnName":"user_id"}
+
+               {"expression":"user_id","isEnd":true,"sourceTableName":"user","targetColumnName":"user_id"}
+
+{"expression":"user_name","isEnd":false,"targetColumnName":"uname"}
+
+     {"isEnd":false,"targetColumnName":"user_name"}
+
+          {"expression":"concat('test', user_name)","isEnd":false,"targetColumnName":"user_name"}
+
+               {"expression":"concat('test', user_name)","isEnd":true,"sourceTableName":"user","targetColumnName":"'test'"}
+
+               {"expression":"concat('test', user_name)","isEnd":true,"sourceTableName":"user","targetColumnName":"user_name"}
+
+```
+
+叶子节点即为最终关联的目标表及列。
 ### 如何使用
 参考DruidTest即可。
+
+# 可能遇到的问题
+#### interval 语句解析异常
+如果数据可视化使用的是tableau，动态sql会生成很多interval语句，interval使用druid进行语法解析的时候可能会报错。
+###### 原因
+druid对interval的词法解析存在缺陷
+###### 解决方案
+下载druid源码，参照https://github.com/alibaba/druid/pull/4368 进行代码修改，使用修改源码后的jar包。
